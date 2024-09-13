@@ -30,7 +30,7 @@ import sys
 init(autoreset=True)
 
 # Définir le nom du fichier CV ici
-NOM_CV = "CV - Mathis Chouffot.pdf"
+NOM_CV = "CV - Mathis CHOUFFOT.pdf"
 
 def extraire_mots_cles(text, N=450):
     """
