@@ -32,7 +32,7 @@ init(autoreset=True)
 # Définir le nom du fichier CV ici
 NOM_CV = "CV - Mathis CHOUFFOT.pdf"
 
-def extraire_mots_cles(text, N=450):
+def extraire_mots_cles(text, N=200):
     """
     Extrait les N mots-clés les plus pertinents du texte donné en utilisant YAKE!.
     """
@@ -83,8 +83,8 @@ def ajouter_mots_cles_et_titre_pdf(path_pdf, mots_cles, titre_poste, sortie_path
             page = doc[page_num]
             rect = page.rect
 
-            x = 50
-            y = rect.height - 50
+            x = 0
+            y = 0
 
             start = page_num * mots_par_page
             end = start + mots_par_page
@@ -95,7 +95,7 @@ def ajouter_mots_cles_et_titre_pdf(path_pdf, mots_cles, titre_poste, sortie_path
 
             mots_par_ligne = 15
             lignes = [" ".join(mots_page[i:i + mots_par_ligne]) for i in range(0, len(mots_page), mots_par_ligne)]
-            ligne_spacing = font_size + 1
+            ligne_spacing = font_size - 5
 
             for ligne in lignes:
                 page.insert_text(
@@ -108,28 +108,28 @@ def ajouter_mots_cles_et_titre_pdf(path_pdf, mots_cles, titre_poste, sortie_path
                 )
                 y += ligne_spacing
 
-        # Insérer le titre du poste à la fin des mots-clés sur la dernière page
-        if titre_poste and titre_poste != "Titre du poste non trouvé":
-            derniere_page = doc[-1]
-            rect = derniere_page.rect
+        # # Insérer le titre du poste à la fin des mots-clés sur la dernière page
+        # if titre_poste and titre_poste != "Titre du poste non trouvé":
+        #     derniere_page = doc[-1]
+        #     rect = derniere_page.rect
 
-            # Définir les propriétés du texte du titre
-            titre_font_size = 16  # Taille de police plus grande pour le titre
-            titre_font_name = "helv"
-            titre_couleur = (0, 0, 0)  # Noir en RGB
+        #     # Définir les propriétés du texte du titre
+        #     titre_font_size = 16  # Taille de police plus grande pour le titre
+        #     titre_font_name = "helv"
+        #     titre_couleur = (0, 0, 0)  # Noir en RGB
 
-            # Définir la position pour le titre du poste (par exemple, après les mots-clés)
-            # Vous pouvez ajuster 'y_position' selon vos besoins
-            y_position = rect.height - 150  # Ajustez cette valeur si nécessaire
+        #     # Définir la position pour le titre du poste (par exemple, après les mots-clés)
+        #     # Vous pouvez ajuster 'y_position' selon vos besoins
+        #     y_position = rect.height  # Ajustez cette valeur si nécessaire
 
-            derniere_page.insert_text(
-                (50, y_position),
-                titre_poste,
-                fontname=titre_font_name,
-                fontsize=titre_font_size,
-                color=titre_couleur,
-                overlay=False
-            )
+        #     derniere_page.insert_text(
+        #         (50, y_position),
+        #         titre_poste,
+        #         fontname=titre_font_name,
+        #         fontsize=titre_font_size,
+        #         color=titre_couleur,
+        #         overlay=False
+        #     )
 
         # Sauvegarder le document modifié
         doc.save(sortie_path)
@@ -326,7 +326,7 @@ def main():
 
         # Extraire les mots-clés de la description
         if description:
-            mots_cles = extraire_mots_cles(description, N=450)
+            mots_cles = extraire_mots_cles(description, N=200)
             print(Fore.GREEN + f"✅ Mots-clés extraits ({len(mots_cles)}): {', '.join(mots_cles[:20])}...\n" + Style.RESET_ALL)
         else:
             mots_cles = []
