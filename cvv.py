@@ -11,6 +11,11 @@ import tempfile
 import subprocess
 import sys
 
+# Importations pour Selenium
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+
 # Initialiser colorama
 init(autoreset=True)
 
@@ -195,6 +200,50 @@ def scraper_offre_linkedin(url, max_retries=5):
     print(Fore.RED + "\n❌ Nombre maximal de tentatives atteint. Impossible de récupérer le contenu de l'annonce.\n")
     return None, None
 
+def scraper_offre_indeed(url):
+    """
+    Scrape la description de l'offre d'emploi et l'intitulé du poste depuis Indeed en utilisant Selenium.
+    """
+    try:
+        options = Options()
+        options.headless = True  # Exécute Chrome en mode headless
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                             "AppleWebKit/537.36 (KHTML, like Gecko) "
+                             "Chrome/112.0.0.0 Safari/537.36")
+
+        # Assurez-vous que le chemin vers chromedriver est correct
+        driver = webdriver.Chrome(options=options)
+        driver.get(url)
+
+        time.sleep(3)  # Attendre que la page se charge complètement
+
+        # Extraire le titre du poste
+        try:
+            titre_element = driver.find_element(By.CSS_SELECTOR, 'h1[data-testid="jobsearch-JobInfoHeader-title"]')
+            titre_poste = titre_element.text.strip()
+            print(Fore.CYAN + f"Titre du poste trouvé : {titre_poste}\n")
+        except Exception as e:
+            titre_poste = "Titre du poste non trouvé"
+            print(Fore.YELLOW + "⚠️ Le titre du poste n'a pas été trouvé.\n")
+
+        # Extraire la description de l'offre
+        try:
+            description_element = driver.find_element(By.ID, 'jobDescriptionText')
+            description = description_element.text.strip()
+        except Exception as e:
+            description = ""
+            print(Fore.YELLOW + "⚠️ La description de l'annonce n'a pas été trouvée.\n")
+
+        driver.quit()
+        return description, titre_poste
+
+    except Exception as e:
+        print(Fore.RED + f"\n❌ Erreur lors du scraping avec Selenium : {e}\n")
+        return None, None
+
 def scraper_manuel():
     """
     Offre à l'utilisateur le choix entre deux méthodes pour saisir la description de l'annonce :
@@ -250,7 +299,7 @@ def scraper_manuel():
 
 def main():
     # Configuration de argparse pour gérer les arguments en ligne de commande
-    parser = argparse.ArgumentParser(description="Optimisation de votre CV avec les Mots-Clés LinkedIn ou Mode Manuel.")
+    parser = argparse.ArgumentParser(description="Optimisation de votre CV avec les Mots-Clés des offres d'emploi.")
     parser.add_argument('-m', '--manuel', action='store_true', help='Mode manuel : fournir la description et le titre de l\'annonce manuellement.')
     args = parser.parse_args()
 
@@ -268,7 +317,7 @@ def main():
  :   : :   :   : :   :: :: :   :   :::     :     :: : :    
 """ + Style.RESET_ALL)
 
-    print(Fore.BLUE + Style.BRIGHT + "\n=== Optimisation de votre CV avec les Mots-Clés LinkedIn===\n\n(Fermez l'app en faisant CTRL + C)\n" + Style.RESET_ALL)
+    print(Fore.BLUE + Style.BRIGHT + "\n=== Optimisation de votre CV avec les Mots-Clés des Offres d'Emploi ===\n\n(Fermez l'app en faisant CTRL + C)\n" + Style.RESET_ALL)
     
     try:
         # Définir le chemin du CV à la racine du dossier contenant le script
@@ -286,16 +335,21 @@ def main():
                 # Mode Manuel
                 description, titre_poste = scraper_manuel()
             else:
-                # Mode Automatique (LinkedIn)
-                # Demander à l'utilisateur d'entrer l'URL de l'annonce LinkedIn
-                url_annonce = input(Fore.CYAN + "🔗 Entrez l'URL de l'annonce LinkedIn : " + Style.RESET_ALL).strip()
+                # Mode Automatique
+                # Demander à l'utilisateur d'entrer l'URL de l'annonce
+                url_annonce = input(Fore.CYAN + "🔗 Entrez l'URL de l'annonce (LinkedIn ou Indeed) : " + Style.RESET_ALL).strip()
 
-                if not url_annonce.startswith("https://www.linkedin.com/jobs/view/"):
-                    print(Fore.RED + "\n❌ L'URL fournie ne semble pas être une URL d'annonce LinkedIn valide.\n")
+                if url_annonce.startswith("https://www.linkedin.com/jobs/view/"):
+                    print(Fore.BLUE + "\n🔍 Scraping de l'annonce LinkedIn..." + Style.RESET_ALL)
+                    description, titre_poste = scraper_offre_linkedin(url_annonce)
+
+                elif url_annonce.startswith("https://fr.indeed.com/") or url_annonce.startswith("https://www.indeed.com/"):
+                    print(Fore.BLUE + "\n🔍 Scraping de l'annonce Indeed..." + Style.RESET_ALL)
+                    description, titre_poste = scraper_offre_indeed(url_annonce)
+
+                else:
+                    print(Fore.RED + "\n❌ L'URL fournie ne correspond pas à une annonce LinkedIn ou Indeed prise en charge.\n")
                     continue  # Retour au début de la boucle
-
-                print(Fore.BLUE + "\n🔍 Scraping de l'annonce LinkedIn..." + Style.RESET_ALL)
-                description, titre_poste = scraper_offre_linkedin(url_annonce)
 
                 if description is None and titre_poste is None:
                     print(Fore.RED + "❌ Impossible de récupérer le contenu de l'annonce.\n")
