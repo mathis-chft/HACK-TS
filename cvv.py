@@ -1,18 +1,3 @@
-"""
-                                                                       
-@@@  @@@   @@@@@@    @@@@@@@  @@@  @@@  @@@@@@@   @@@@@@   
-@@@  @@@  @@@@@@@@  @@@@@@@@  @@@  @@@  @@@@@@@  @@@@@@@   
-@@!  @@@  @@!  @@@  !@@       @@!  !@@    @@!    !@@       
-!@!  @!@  !@!  @!@  !@!       !@!  @!!    !@!    !@!       
-@!@!@!@!  @!@!@!@!  !@!       @!@@!@!     @!!    !!@@!!    
-!!!@!!!!  !!!@!!!!  !!!       !!@!!!      !!!     !!@!!!   
-!!:  !!!  !!:  !!!  :!!       !!: :!!     !!:         !:!  
-:!:  !:!  :!:  !:!  :!:       :!:  !:!    :!:        !:!   
-::   :::  ::   :::   ::: :::   ::  :::     ::    :::: ::   
- :   : :   :   : :   :: :: :   :   :::     :     :: : :    
-                                                                       
-"""
-
 import fitz  # PyMuPDF
 import yake
 import os
@@ -32,13 +17,13 @@ init(autoreset=True)
 # Définir le nom du fichier CV ici
 NOM_CV = "CV - Mathis CHOUFFOT.pdf"
 
-def extraire_mots_cles(text, N=200):
+def extraire_mots_cles(text, N=400):
     """
     Extrait les N mots-clés les plus pertinents du texte donné en utilisant YAKE!.
     """
     language = "fr"  # Langue du texte
     max_ngram_size = 2
-    deduplication_threshold = 0.95
+    deduplication_threshold = 0.7
     deduplication_algo = "seqm"
 
     custom_kw_extractor = yake.KeywordExtractor(
@@ -66,7 +51,7 @@ def ajouter_mots_cles_et_titre_pdf(path_pdf, mots_cles, titre_poste, sortie_path
     """
     Ajoute les mots-clés au PDF sans modifier le contenu existant.
     Les mots-clés sont répartis discrètement sur les pages existantes.
-    Ajoute également le titre du poste à la fin des mots-clés sur la dernière page.
+    Ajoute également le titre du poste au début des mots-clés sur la première page.
     """
     try:
         doc = fitz.open(path_pdf)
@@ -90,46 +75,41 @@ def ajouter_mots_cles_et_titre_pdf(path_pdf, mots_cles, titre_poste, sortie_path
             end = start + mots_par_page
             mots_page = mots_cles[start:end]
 
-            if not mots_page:
+            if not mots_page and page_num != 0:
                 continue
 
-            mots_par_ligne = 15
-            lignes = [" ".join(mots_page[i:i + mots_par_ligne]) for i in range(0, len(mots_page), mots_par_ligne)]
+            mots_par_ligne = 11
+
+            lignes = []
+
+            # Pour la première page, inclure le titre au début
+            if page_num == 0 and titre_poste and titre_poste != "Titre du poste non trouvé":
+                lignes.append(f"[{titre_poste}]")
+                lignes.append("")  # Ligne vide pour l'espacement
+
+            # Traiter les mots-clés de la page
+            if mots_page:
+                mots_lignes = [" ".join(mots_page[i:i + mots_par_ligne]) for i in range(0, len(mots_page), mots_par_ligne)]
+                lignes.extend(mots_lignes)
+
             ligne_spacing = font_size - 5
 
-            for ligne in lignes:
+            for index, ligne in enumerate(lignes):
+                # Ajuster la taille de police pour le titre
+                if page_num == 0 and index == 0 and titre_poste and titre_poste != "Titre du poste non trouvé":
+                    font_size_line = 16  # Taille de police pour le titre
+                else:
+                    font_size_line = font_size
+
                 page.insert_text(
                     (x, y),
                     ligne,
                     fontname=font_name,
-                    fontsize=font_size,
+                    fontsize=font_size_line,
                     color=couleur,
                     overlay=False
                 )
                 y += ligne_spacing
-
-        # # Insérer le titre du poste à la fin des mots-clés sur la dernière page
-        # if titre_poste and titre_poste != "Titre du poste non trouvé":
-        #     derniere_page = doc[-1]
-        #     rect = derniere_page.rect
-
-        #     # Définir les propriétés du texte du titre
-        #     titre_font_size = 16  # Taille de police plus grande pour le titre
-        #     titre_font_name = "helv"
-        #     titre_couleur = (0, 0, 0)  # Noir en RGB
-
-        #     # Définir la position pour le titre du poste (par exemple, après les mots-clés)
-        #     # Vous pouvez ajuster 'y_position' selon vos besoins
-        #     y_position = rect.height  # Ajustez cette valeur si nécessaire
-
-        #     derniere_page.insert_text(
-        #         (50, y_position),
-        #         titre_poste,
-        #         fontname=titre_font_name,
-        #         fontsize=titre_font_size,
-        #         color=titre_couleur,
-        #         overlay=False
-        #     )
 
         # Sauvegarder le document modifié
         doc.save(sortie_path)
@@ -180,8 +160,8 @@ def scraper_offre_linkedin(url, max_retries=5):
                     # Extraire le texte de la description
                     description = module_description.get_text(separator='\n', strip=True)
 
-                # Trouver le div contenant le titre du poste
-                module_titre = soup.find('div', class_='t-24 job-details-jobs-unified-top-card__job-title')
+                # Trouver le h1 contenant le titre du poste
+                module_titre = soup.find('h1', class_='topcard__title')
 
                 if not module_titre:
                     # Tenter de trouver le titre du poste via une autre méthode
@@ -193,13 +173,8 @@ def scraper_offre_linkedin(url, max_retries=5):
                         titre_poste = "Titre du poste non trouvé"
                         print(Fore.YELLOW + "⚠️ Le titre du poste n'a pas été trouvé.\n")
                 else:
-                    h1 = module_titre.find('h1')
-                    if not h1:
-                        print(Fore.YELLOW + "⚠️ Le titre du poste n'a pas été trouvé dans le div.\n")
-                        titre_poste = "Titre du poste non trouvé"
-                    else:
-                        titre_poste = h1.get_text(separator=' ', strip=True)
-                        print(Fore.CYAN + f"Titre du poste trouvé : {titre_poste}\n")
+                    titre_poste = module_titre.get_text(separator=' ', strip=True)
+                    print(Fore.CYAN + f"Titre du poste trouvé : {titre_poste}\n")
 
                 return description, titre_poste
 
@@ -293,7 +268,7 @@ def main():
  :   : :   :   : :   :: :: :   :   :::     :     :: : :    
 """ + Style.RESET_ALL)
 
-    print(Fore.BLUE + Style.BRIGHT + "\n=== Optimisation de votre CV avec les Mots-Clés LinkedIn ===\n" + Style.RESET_ALL)
+    print(Fore.BLUE + Style.BRIGHT + "\n=== Optimisation de votre CV avec les Mots-Clés LinkedIn===\n\n(Fermez l'app en faisant CTRL + C)\n" + Style.RESET_ALL)
     
     try:
         # Définir le chemin du CV à la racine du dossier contenant le script
@@ -304,58 +279,61 @@ def main():
             print(Fore.RED + f"\n❌ Le fichier CV '{NOM_CV}' n'a pas été trouvé dans le répertoire {script_dir}.\n")
             return
 
-        # Déterminer le mode d'exécution
-        if args.manuel:
-            # Mode Manuel
-            description, titre_poste = scraper_manuel()
-        else:
-            # Mode Automatique (LinkedIn)
-            # Demander à l'utilisateur d'entrer l'URL de l'annonce LinkedIn
-            url_annonce = input(Fore.CYAN + "🔗 Entrez l'URL de l'annonce LinkedIn : " + Style.RESET_ALL).strip()
+        # Boucle principale
+        while True:
+            # Déterminer le mode d'exécution
+            if args.manuel:
+                # Mode Manuel
+                description, titre_poste = scraper_manuel()
+            else:
+                # Mode Automatique (LinkedIn)
+                # Demander à l'utilisateur d'entrer l'URL de l'annonce LinkedIn
+                url_annonce = input(Fore.CYAN + "🔗 Entrez l'URL de l'annonce LinkedIn : " + Style.RESET_ALL).strip()
 
-            if not url_annonce.startswith("https://www.linkedin.com/jobs/view/"):
-                print(Fore.RED + "\n❌ L'URL fournie ne semble pas être une URL d'annonce LinkedIn valide.\n")
-                return
+                if not url_annonce.startswith("https://www.linkedin.com/jobs/view/"):
+                    print(Fore.RED + "\n❌ L'URL fournie ne semble pas être une URL d'annonce LinkedIn valide.\n")
+                    continue  # Retour au début de la boucle
 
-            print(Fore.BLUE + "\n🔍 Scraping de l'annonce LinkedIn..." + Style.RESET_ALL)
-            description, titre_poste = scraper_offre_linkedin(url_annonce)
+                print(Fore.BLUE + "\n🔍 Scraping de l'annonce LinkedIn..." + Style.RESET_ALL)
+                description, titre_poste = scraper_offre_linkedin(url_annonce)
 
-            if description is None and titre_poste is None:
-                print(Fore.RED + "❌ Impossible de récupérer le contenu de l'annonce.\n")
-                return
+                if description is None and titre_poste is None:
+                    print(Fore.RED + "❌ Impossible de récupérer le contenu de l'annonce.\n")
+                    continue  # Retour au début de la boucle
 
-        # Extraire les mots-clés de la description
-        if description:
-            mots_cles = extraire_mots_cles(description, N=200)
-            print(Fore.GREEN + f"✅ Mots-clés extraits ({len(mots_cles)}): {', '.join(mots_cles[:20])}...\n" + Style.RESET_ALL)
-        else:
-            mots_cles = []
-            print(Fore.YELLOW + "⚠️ Aucun mot-clé extrait car la description est vide.\n" + Style.RESET_ALL)
+            # Extraire les mots-clés de la description
+            if description:
+                mots_cles = extraire_mots_cles(description, N=400)
+                print(Fore.GREEN + f"✅ Mots-clés extraits ({len(mots_cles)}): {', '.join(mots_cles[:20])}...\n" + Style.RESET_ALL)
+            else:
+                mots_cles = []
+                print(Fore.YELLOW + "⚠️ Aucun mot-clé extrait car la description est vide.\n" + Style.RESET_ALL)
 
-        # Vérifier si le titre du poste a été trouvé
-        if titre_poste and titre_poste != "Titre du poste non trouvé":
-            print(Fore.GREEN + f"✅ Titre du poste extrait : {titre_poste}\n" + Style.RESET_ALL)
-        else:
-            titre_poste = "Titre du poste non trouvé"
-            print(Fore.YELLOW + "⚠️ Aucun titre de poste trouvé.\n" + Style.RESET_ALL)
+            # Vérifier si le titre du poste a été trouvé
+            if titre_poste and titre_poste != "Titre du poste non trouvé":
+                print(Fore.GREEN + f"✅ Titre du poste extrait : {titre_poste}\n" + Style.RESET_ALL)
+            else:
+                titre_poste = "Titre du poste non trouvé"
+                print(Fore.YELLOW + "⚠️ Aucun titre de poste trouvé.\n" + Style.RESET_ALL)
 
-        # Définir le chemin de sortie avec le titre du poste
-        if titre_poste != "Titre du poste non trouvé":
-            titre_sanitized = sanitize_filename(titre_poste)
-        else:
-            titre_sanitized = "Titre_Poste"
+            # Définir le chemin de sortie avec le titre du poste
+            if titre_poste != "Titre du poste non trouvé":
+                titre_sanitized = sanitize_filename(titre_poste)
+            else:
+                titre_sanitized = "Titre_Poste"
 
-        nom_fichier, extension = os.path.splitext(NOM_CV)
-        sortie_nom = f"[{nom_fichier}] [{titre_sanitized}]{extension}"
-        sortie_path = os.path.join(script_dir, sortie_nom)
+            nom_fichier, extension = os.path.splitext(NOM_CV)
+            sortie_nom = f"[{nom_fichier}] [{titre_sanitized}]{extension}"
+            sortie_path = os.path.join(script_dir, sortie_nom)
 
-        # Ajouter les mots-clés et le titre du poste au PDF
-        ajouter_mots_cles_et_titre_pdf(path_pdf, mots_cles, titre_poste, sortie_path)
+            # Ajouter les mots-clés et le titre du poste au PDF
+            ajouter_mots_cles_et_titre_pdf(path_pdf, mots_cles, titre_poste, sortie_path)
 
-        print(Fore.BLUE + "🎉 Processus terminé avec succès !" + Style.RESET_ALL + "\n")
+            print(Fore.BLUE + "🎉 Processus terminé avec succès !" + Style.RESET_ALL + "\n")
+            print(Fore.CYAN + "----------------------------------------\n" + Style.RESET_ALL)
 
     except KeyboardInterrupt:
-        print(Fore.RED + "\n\n❌ Processus interrompu par l'utilisateur (Ctrl+C).\n" + Style.RESET_ALL)
+        print(Fore.RED + "\n\n❌ Application fermée (Ctrl+C).\n" + Style.RESET_ALL)
         sys.exit(1)
 
 if __name__ == "__main__":
