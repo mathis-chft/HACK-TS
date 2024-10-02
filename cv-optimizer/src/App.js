@@ -1,6 +1,6 @@
 // src/App.js
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import './App.css'; // Assurez-vous que ce fichier contient les directives Tailwind
 
@@ -13,6 +13,9 @@ function App() {
   const [downloadLink, setDownloadLink] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Référence pour le champ de fichier
+  const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
     setCvFile(e.target.files[0]);
@@ -75,6 +78,9 @@ function App() {
         }
       }
 
+      console.log('Disposition:', disposition);
+      console.log('Filename:', filename);
+
       // Créer une URL pour le blob
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       setDownloadLink({ url, filename });
@@ -111,12 +117,17 @@ function App() {
     setMode('automatic');
     setDownloadLink(null);
     setError(null);
+    
+    // Réinitialiser la valeur du champ de fichier via la référence
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-900 dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-300">
       <div className="bg-gray-800 dark:bg-gray-800 shadow-lg rounded-lg p-8 w-full max-w-2xl transition-colors duration-300">
-        <h1 className="text-3xl font-bold text-center text-gray-100 mb-6">HACKTS</h1>
+        <h1 className="text-3xl font-bold text-center text-gray-100 mb-6">Optimisation de votre CV</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Upload CV */}
           <div>
@@ -137,6 +148,7 @@ function App() {
               type="file" 
               accept="application/pdf" 
               onChange={handleFileChange} 
+              ref={fileInputRef} 
               required 
               className="hidden"
             />
@@ -237,7 +249,8 @@ function App() {
 
         {/* Section de téléchargement */}
         {downloadLink && (
-          <div className="mt-10">
+          <div className="mt-6">
+            <h2 className="text-2xl font-semibold text-gray-100 mb-4 text-center">CV Optimisé</h2>
             <div className="flex space-x-4">
               <button 
                 onClick={handleDownload}

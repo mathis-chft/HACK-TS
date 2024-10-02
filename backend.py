@@ -27,13 +27,14 @@ origins = [
     # Ajoutez d'autres origines si nécessaire, par exemple votre domaine en production
 ]
 
-# Ajoutez le middleware CORS
+# Ajoutez le middleware CORS avec 'expose_headers'
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,  # Liste des origines autorisées
     allow_credentials=True,
     allow_methods=["*"],  # Autoriser toutes les méthodes HTTP (GET, POST, etc.)
     allow_headers=["*"],  # Autoriser tous les en-têtes
+    expose_headers=["Content-Disposition"],  # Exposer 'Content-Disposition' au frontend
 )
 
 # Constants
@@ -307,6 +308,7 @@ async def process_cv(
         headers = {
             'Content-Disposition': f'attachment; filename="{sortie_nom}"'
         }
+        logger.info(f"Content-Disposition header: {headers['Content-Disposition']}")
 
         return FileResponse(
             path=sortie_path,
