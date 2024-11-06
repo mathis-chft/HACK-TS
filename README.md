@@ -25,11 +25,18 @@
 ```
 
 # How to use the tool ?
-## 1. Import your CV
-Just import it from your computer lol (you don't need further explanations, did you ? hahahaha)
 
-## 2. Get the link of the offer
+## 1. Go to HACKTS
+- The server should normally be on [localost:3000](http://localhost:3000)
+
+## 2. Import your CV
+- Just import it from your computer lol (you don't need further explanations, did you ? hahahaha)
+
+## 3. Get the link of the offer
 - Go to Linkedin
 - Go to the jobs section
 - Select an offer and get the share link
 - Paste it into HACKTS
+
+## 4. Boom, get the magic
+- Just download your optimized CV and bypass the ATS lol !
