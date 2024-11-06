@@ -23,3 +23,13 @@
 ```bash
  npm run start
 ```
+
+# How to use the tool ?
+## 1. Import your CV
+Just import it from your computer lol (you don't need further explanations, did you ? hahahaha)
+
+## 2. Get the link of the offer
+- Go to Linkedin
+- Go to the jobs section
+- Select an offer and get the share link
+- Paste it into HACKTS
